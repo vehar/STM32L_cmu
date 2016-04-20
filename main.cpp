@@ -1,5 +1,9 @@
 #include "main.h"
-	 
+#include "board.h"//In main.c
+
+#include "Communication_DM_STM.h"
+
+
 //#define WDG_ON disable watchdog for debug
 
 #define MAX_CURRENT_LIM 6 // 6 means 600ma
@@ -60,10 +64,10 @@ typedef struct
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+
 /*
-ADC_InitTypeDef ADC_InitStructure;
-ADC_CommonInitTypeDef ADC_CommonInitStructure;
-DMA_InitTypeDef DMA_InitStructure;
+
+*/
 
 __IO uint16_t 	ADC_ConvertedValue, T_StartupTimeDelay;
 
@@ -72,12 +76,13 @@ int32_t temperature_C;
 
 uint16_t ADC_ConvertedValueBuff[ADC_CONV_BUFF_SIZE];
 
-char strDisp[20] ;
-
-DisplayState_TypeDef CurrentlyDisplayed = Display_TemperatureDegC;
 
 CALIB_TypeDef calibdata;    // field storing temp sensor calibration data 
 
+
+ ADC_InitTypeDef ADC_InitStructure;
+ ADC_CommonInitTypeDef ADC_CommonInitStructure;
+ DMA_InitTypeDef DMA_InitStructure;
 
 volatile bool flag_ADCDMA_TransferComplete;
 volatile bool flag_UserButton;
@@ -88,7 +93,7 @@ __IO uint16_t   val_ref, val_25, val_110;
 
 __IO FLASH_Status FLASHStatus = FLASH_COMPLETE;
 
-*/
+
 RCC_ClocksTypeDef RCC_Clocks;
 /* Private function prototypes -----------------------------------------------*/
 void  RCC_Configuration(void);
@@ -101,9 +106,10 @@ void  powerDownADC_Temper(void);
 void  processTempData(void);
 void  configureWakeup (void);
 void  writeCalibData(CALIB_TypeDef* calibStruct);
-/*
+
 FunctionalState  testUserCalibData(void);
-FunctionalState  testFactoryCalibData(void);*/
+FunctionalState  testFactoryCalibData(void);
+
 void insertionSort(uint16_t *numbers, uint32_t array_size);
 uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples);
 void clearUserButtonFlag(void);
@@ -277,6 +283,7 @@ void DM_reciev()
 	NVIC_EnableIRQ(SPI2_IRQn);
 }
 
+/*
 void hvl()
 {
 GPIO_InitTypeDef gpio;
@@ -289,10 +296,11 @@ RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
     //gpio.GPIO_PuPd = GPIO_PuPd_DOWN;
 
 	 GPIO_Init(GPIOA,&gpio);
-	
+
 	// GPIO_ResetBits(GPIOA, GPIO_Pin_4);
 	GPIO_SetBits(GPIOA, GPIO_Pin_4);
 }
+*/
 
 void Current_chk()
 {
@@ -335,8 +343,6 @@ void tmg_dm(uint8_t pid) //https://docs.google.com/document/d/1nXo-8PuYDCrjen-9j
 	Btn_chk();		
 	Enc_chk();
 	
-	
-	
 	rx_handling();	
 		
 	if(getSPI_RX(0) == 0x00)
@@ -369,7 +375,13 @@ void HSI_on_16MHz (void){
   RCC->CR &= ~RCC_CR_MSION; //MSI turn off.   
 }
 
-void All_clk_On(void){ //
+void All_clk_On(void) //TODO: delete duplications!
+{ 	
+		//Enable the GPIOs clocks 
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC| RCC_AHBPeriph_GPIOD| RCC_AHBPeriph_GPIOE| RCC_AHBPeriph_GPIOH, ENABLE);      
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_COMP |  RCC_APB1Periph_PWR , ENABLE);   //Enable comparator and PWR mngt clocks
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG , ENABLE);//Enable ADC & SYSCFG clocks  
+
   RCC->AHBENR  |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN;
   RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_I2C1EN | RCC_APB1ENR_I2C2EN | RCC_APB1ENR_USART2EN | RCC_APB1ENR_SPI2EN ;
   RCC->APB2ENR |= RCC_APB2ENR_USART1EN | RCC_APB2ENR_SPI1EN;
@@ -472,7 +484,7 @@ void init_mcu_fu()
        system_stm32l1xx.c file
      */ 
 	
-  //  HSI_on_16MHz(); 
+  // HSI_on_16MHz(); 
 	
     All_clk_On(); 
  //Timer2_init_vs_irq(); //ovr_irq
@@ -487,8 +499,7 @@ void init_mcu_fu()
 	Button_init_vs_irq();
 	
 	configureADC_Temp();//HV
-	adc_init();
-	//hvl();
+	//adc_init();
 		
 	delay();
 	//gps_init();		
@@ -595,7 +606,7 @@ float	Current_Temperature = 0;
  ADC_SoftwareStartConv(ADC1);
 	
 	//stm32_delay_delayms(1);
-	
+	/*
  data  = ADC1->DR;
 	
 	Current_Temperature = data;
@@ -608,7 +619,7 @@ float	Current_Temperature = 0;
 	
 	if((Current_Temperature > STM_TEMPERATURE_MIN)&&(Current_Temperature <= STM_TEMPERATURE_MAX)) 
 		return true;
-	else 
+	else */
 		return false;
 }
 
@@ -657,6 +668,7 @@ uint32_t Prelaunch_verification(void)
 }
 
 uint32_t AdcData = 0;
+
 int main(void) 
 {
 	//Communication Comm;		//Communication protocol vs STM
@@ -665,10 +677,35 @@ int main(void)
  ///////////////////////On-StartTestSection_start////////////////////////////////// 
   RCC_Configuration();   //Configure Clocks for Application need 
   
-  //PWR_VoltageScalingConfig(PWR_VoltageScaling_Range1);    //Set internal voltage regulator to 1.8V 
-  //while (PWR_GetFlagStatus(PWR_FLAG_VOS) != RESET) ;   //Wait Until the Voltage Regulator is ready 
+  PWR_VoltageScalingConfig(PWR_VoltageScaling_Range1);    //Set internal voltage regulator to 1.8V 
+  while (PWR_GetFlagStatus(PWR_FLAG_VOS) != RESET) ;   //Wait Until the Voltage Regulator is ready 
+ 
+	/* Enable debug features in low power modes (Sleep, STOP and STANDBY) */
+#ifdef  DEBUG_SWD_PIN
+ // DBGMCU_Config(DBGMCU_SLEEP | DBGMCU_STOP | DBGMCU_STANDBY, ENABLE);
+#endif
+
+	  /* Disable SysTick IRQ and SysTick Timer */
+ // SysTick->CTRL  &= ~ ( SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk );
+
+  /* Test user or factory temperature sensor calibration value */
+ /* if ( testUserCalibData() == ENABLE ) calibdata = *USER_CALIB_DATA;
+  else if ( testFactoryCalibData() == ENABLE ) calibdata = *FACTORY_CALIB_DATA;
+  else {*/
+    calibdata.TS_CAL_COLD = DEFAULT_COLD_VAL;
+    calibdata.TS_CAL_HOT = DEFAULT_HOT_VAL;
+    writeCalibData(&calibdata);
+    calibdata = *USER_CALIB_DATA;
+ // }
+   /* Configure direct memory access for ADC usage*/
+  configureDMA();
+
+  /* Configure ADC for temperature sensor value conversion */ 
+  configureADC_Temp();
+ 
  ///////////////////////On-StartTestSection_end//////////////////////////////////// 
  //////////////////////////////////////////////////////////////////////////////////
+	 
 	
 	init_mcu_fu();
 
@@ -679,20 +716,31 @@ int main(void)
 
 	Prelaunch_verification();
 	
+	SysTick_Config(RCC_Clocks.HCLK_Frequency / 2000); // Configure SysTick IRQ and SysTick Timer to generate interrupts every 500µs
+
+
 	if(f_SystemOk) //system & device ok	
 	{
 		Proc_Pow_ON();
 	}
 	
+	//acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
+	
 while(1)
 {
 	
-	STM_temperature_check();//DEBUG!
+	//STM_temperature_check();//DEBUG!
 	
-     AdcData = ADC1->JDR1;//	 stm_adc_5v_DATA: //0x03
+   //  AdcData = ADC1->JDR1;//	 stm_adc_5v_DATA: //0x03
 	//AdcData = AdcData * 3.3 / 4095;
-	 AdcData = ADC1->JDR2;// stm_adc_140v_DATA: //0x04
+	// AdcData = ADC1->JDR2;// stm_adc_140v_DATA: //0x04
 	//AdcData = AdcData * 3.3 / 4095;
+	
+	acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
+  processTempData(); // Process mesured Temperature data - calculate average temperature value in °C 
+      //  average temperature value in °C  
+	temperature_C = temperature_C + 31; //31 = temp bug fix!
+	
 	
 	if(BUTT_1) //1
 	{
@@ -746,6 +794,166 @@ while(1)
 
 //************************************
 
+void insertionSort(uint16_t *numbers, uint32_t array_size) 
+{
+	uint32_t i, j;
+	uint32_t index;
+
+  for (i=1; i < array_size; i++) {
+    index = numbers[i];
+    j = i;
+    while ((j > 0) && (numbers[j-1] > index)) {
+      numbers[j] = numbers[j-1];
+      j = j - 1;
+    }
+    numbers[j] = index;
+  }
+}
+
+uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples)
+{
+    uint32_t sum=0;
+    uint32_t  index, maxindex;
+    /* discard  the lowest and the highest data samples */ 
+	maxindex = 3 * numOfSamples / 4;
+    for (index = (numOfSamples / 4); index < maxindex; index++){
+            sum += array[index];
+    }
+	/* return the mean value of the remaining samples value*/
+    return ( sum / (numOfSamples / 2) );
+}
+
+
+
+FunctionalState  testUserCalibData(void)
+{
+  int32_t testdiff;
+  FunctionalState retval = DISABLE;
+  
+  testdiff = USER_CALIB_DATA->TS_CAL_HOT - USER_CALIB_DATA->TS_CAL_COLD;
+  
+  if ( testdiff > TEST_CALIB_DIFF )    retval = ENABLE;
+  
+  return retval;
+}
+
+FunctionalState  testFactoryCalibData(void)
+{
+  int32_t testdiff;
+  FunctionalState retval = DISABLE;
+  
+  testdiff = FACTORY_CALIB_DATA->TS_CAL_HOT - FACTORY_CALIB_DATA->TS_CAL_COLD;
+  
+  if ( testdiff > TEST_CALIB_DIFF )    retval = ENABLE;
+  
+  return retval;
+}
+
+void  writeCalibData(CALIB_TypeDef* calibStruct)
+{
+
+  uint32_t  Address = 0;
+  uint32_t  dataToWrite;
+  
+  /* Unlock the FLASH PECR register and Data EEPROM memory */
+  DATA_EEPROM_Unlock();
+  
+  /* Clear all pending flags */      
+  FLASH_ClearFlag(FLASH_FLAG_EOP|FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR
+                  | FLASH_FLAG_SIZERR | FLASH_FLAG_OPTVERR);	
+  
+  /*  Data EEPROM Fast Word program of FAST_DATA_32 at addresses defined by 
+      DATA_EEPROM_START_ADDR and DATA_EEPROM_END_ADDR */  
+ 
+  Address = (uint32_t) USER_CALIB_DATA;
+
+
+  dataToWrite = 0x00;
+  dataToWrite = (uint32_t)(calibStruct->TS_CAL_COLD) << 16;
+  
+  FLASHStatus = DATA_EEPROM_ProgramWord(Address, dataToWrite);
+
+  if(FLASHStatus != FLASH_COMPLETE)
+  {
+    while(1); /* stay in loop in case of crittical programming error */
+  }
+
+  Address += 4;
+
+  dataToWrite = 0x00;
+  dataToWrite = (uint32_t)(calibStruct->TS_CAL_HOT) << 16;
+  
+  FLASHStatus = DATA_EEPROM_ProgramWord(Address, dataToWrite);
+  
+}
+
+
+void configureDMA(void)
+{
+  /* Declare NVIC init Structure */
+  NVIC_InitTypeDef NVIC_InitStructure;
+  
+  /* Enable DMA1 clock */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+
+  /* De-initialise  DMA */
+  DMA_DeInit(DMA1_Channel1);
+  
+  /* DMA1 channel1 configuration */
+  DMA_StructInit(&DMA_InitStructure);
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);	     // Set DMA channel Peripheral base address to ADC Data register
+  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&ADC_ConvertedValueBuff;  // Set DMA channel Memeory base addr to ADC_ConvertedValueBuff address
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;                         // Set DMA channel direction to peripheral to memory
+  DMA_InitStructure.DMA_BufferSize = ADC_CONV_BUFF_SIZE;                     // Set DMA channel buffersize to peripheral to ADC_CONV_BUFF_SIZE
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;	     // Disable DMA channel Peripheral address auto increment
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;                    // Enable Memeory increment (To be verified ....)
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;// set Peripheral data size to 8bit 
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;	     // set Memeory data size to 8bit 
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;                              // Set DMA in normal mode
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;	                     // Set DMA channel priority to High
+  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;                               // Disable memory to memory option 
+  DMA_Init(DMA1_Channel1, &DMA_InitStructure);								 // Use Init structure to initialise channel1 (channel linked to ADC)
+
+  /* Enable Transmit Complete Interrup for DMA channel 1 */ 
+  DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
+  
+  /* Setup NVIC for DMA channel 1 interrupt request */
+  NVIC_InitStructure.NVIC_IRQChannel =   DMA1_Channel1_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+  
+}
+
+
+void processTempData(void)
+{
+  uint32_t index,dataSum;
+  dataSum = 0;
+
+  /* sort received data in */
+  insertionSort(ADC_ConvertedValueBuff, MAX_TEMP_CHNL);
+  
+  /* Calculate the Interquartile mean */
+  tempAVG = interquartileMean(ADC_ConvertedValueBuff, MAX_TEMP_CHNL);
+  
+  /* Sum up all mesured data for reference temperature average calculation */ 
+  for (index=16; index < ADC_CONV_BUFF_SIZE; index++){
+    dataSum += ADC_ConvertedValueBuff[index];
+  }
+  /* Devide sum up result by 4 for the temperature average calculation*/
+  refAVG = dataSum / 4 ;
+
+
+  /* Calculate temperature in °C from Interquartile mean */
+  temperature_C = ( (int32_t) tempAVG - (int32_t) calibdata.TS_CAL_COLD ) ;	
+  temperature_C = temperature_C * (int32_t)(110 - 25);                      
+  temperature_C = temperature_C / 
+                  (int32_t)(calibdata.TS_CAL_HOT - calibdata.TS_CAL_COLD); 
+  temperature_C = temperature_C + 25; 
+}
+
 void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter) 
 {
 	for(uint32_t i = 0; i<iter; i++)
@@ -756,6 +964,7 @@ void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter)
 	stm32_delay_delayus(time_off);	
 	}
 }
+
 
 void SPI2_IRQHandler()//TODO: add transmition!
 {	
@@ -789,7 +998,7 @@ void SPI2_IRQHandler()//TODO: add transmition!
 	
   //SPI_I2S_ClearITPendingBit(SPI2, SPI_I2S_IT_RXNE);
   
-    /* SPI Error interrupt--------------------------------------- */
+    // SPI Error interrupt--------------------------------------- 
   if (SPI_I2S_GetITStatus(SPI2, SPI_I2S_IT_OVR) == SET) //TODO: test!!!!!!
   {
    // SPI_ReceiveData8(SPI1);
@@ -801,12 +1010,13 @@ void SPI2_IRQHandler()//TODO: add transmition!
 //************************************
  void HardFault_Handler(void)
 {	
+	while(1){};
 	NVIC_GenerateSystemReset();	
 }
 
  void EXTI0_IRQHandler(void)
 {
-  /* Disable general interrupts */
+  // Disable general interrupts 
   //disableInterrupts();
 	__disable_irq();
  
@@ -858,6 +1068,17 @@ void SPI2_IRQHandler()//TODO: add transmition!
 	__enable_irq();
 }
 
+
+void SysTick_Handler(void)
+{
+    TimingDelay_Decrement();
+}
+
+void DMA1_Channel1_IRQHandler    (void)
+{
+  DMA_ClearFlag(DMA1_IT_TC1);
+  setADCDMA_TransferComplete();  // set flag_ADCDMA_TransferComplete global flag 
+}
 
 void IWDG_Configuration(void)
 {
@@ -1088,20 +1309,32 @@ void RCC_Configuration(void)
   {    
     while(1); //Stay in infinite loop if HSE is not disabled*/
   }
-  
-    /* Enable  comparator clock LCD and PWR mngt */
-  RCC_APB1PeriphClockCmd(/*RCC_APB1Periph_LCD |*/ RCC_APB1Periph_PWR, ENABLE);
-    
-  /* Enable ADC clock & SYSCFG */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG, ENABLE);
-
-  	//Enable the GPIOs clocks 
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC| RCC_AHBPeriph_GPIOD| RCC_AHBPeriph_GPIOE| RCC_AHBPeriph_GPIOH, ENABLE);      
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_COMP |  RCC_APB1Periph_PWR , ENABLE);   //Enable comparator and PWR mngt clocks
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG , ENABLE);//Enable ADC & SYSCFG clocks  
 }
 
 
+/**
+  * @brief  Decrements the TimingDelay variable.
+  * @param  None
+  * @retval None
+  */
+void TimingDelay_Decrement(void)
+{
+  if (TimingDelay != 0x00)
+  { 
+    TimingDelay--;
+  }
+}
+
+
+void setADCDMA_TransferComplete(void)
+{
+  flag_ADCDMA_TransferComplete = true;
+}
+
+void clearADCDMA_TransferComplete(void)
+{
+  flag_ADCDMA_TransferComplete = false;
+}
 
 
 //BeepDelauyed(1,1);	    //ultra

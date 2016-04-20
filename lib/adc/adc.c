@@ -41,44 +41,30 @@ ADC_SoftwareStartInjectedConv(ADC1);
 
 
 /////////////////////////////////////////////////
-ADC_InitTypeDef ADC_InitStructure;
-ADC_CommonInitTypeDef ADC_CommonInitStructure;
-DMA_InitTypeDef DMA_InitStructure;
-
 
 void acquireTemperatureData(void)
 {
-  /* Enable ADC clock */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-
-  /* Enable DMA1 clock */
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-  
-  /* Enable ADC1 */
-  ADC_Cmd(ADC1, ENABLE);
-
-  /* Wait until the ADC1 is ready */
-  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET); 
-
-  /* re-initialize DMA -- is it needed ?*/
+   /* re-initialize DMA -- is it needed ?*/
   DMA_DeInit(DMA1_Channel1);
   DMA_Init(DMA1_Channel1, &DMA_InitStructure);
   DMA_Cmd(DMA1_Channel1, ENABLE);
   
   /* Enable DMA channel 1 Transmit complete interrupt*/
-  DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
+//  DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
 
   /* Disable DMA mode for ADC1 */ 
   ADC_DMACmd(ADC1, DISABLE);
 
+  for(int i = 0; i< 30000; i++);
    /* Enable DMA mode for ADC1 */  
   ADC_DMACmd(ADC1, ENABLE);
-  
+  for(int i = 0; i< 30000; i++);
   /* Clear global flag for DMA transfert complete */
- // clearADCDMA_TransferComplete(); 
+//  clearADCDMA_TransferComplete(); 
   
   /* Start ADC conversion */
   ADC_SoftwareStartConv(ADC1);
+	DMA_ClearFlag(DMA1_IT_TC1);
 }
 
 void configureADC_Temp(void)
@@ -121,6 +107,19 @@ void configureADC_Temp(void)
   ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 18, ADC_SampleTime_384Cycles);
   ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 19, ADC_SampleTime_384Cycles);
   ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 20, ADC_SampleTime_384Cycles);
+	
+	//===========================================================================
+	 /* Enable ADC clock */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+
+  /* Enable DMA1 clock */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+  
+  /* Enable ADC1 */
+  ADC_Cmd(ADC1, ENABLE);
+
+  /* Wait until the ADC1 is ready */
+  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET); 
 }
 
 void powerDownADC_Temper(void)
@@ -135,3 +134,4 @@ void powerDownADC_Temper(void)
   /* Disable DMA1 clock */
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, DISABLE);
 }
+

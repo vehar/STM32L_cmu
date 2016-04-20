@@ -175,7 +175,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\ULP2CM3.DLL</Flash2>
-          <Flash3>"" ()</Flash3>
+          <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -367,7 +367,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>.\lib\cmsis;.\lib\spl;..\1;.\lib\spl\inc;.\lib\spl\src;.\lib\i2c;.\lib\ina219;.\lib\ds3231;.\lib\taskmgr;.\lib\spi;.\lib\uart;.\lib\gps;.\lib\adc;.\lib\btns;.\lib\timer;.\lib\Communication</IncludePath>
+              <IncludePath>.\lib\cmsis;.\lib\spl;..\1;.\lib\spl\inc;.\lib\spl\src;.\lib\i2c;.\lib\ina219;.\lib\ds3231;.\lib\taskmgr;.\lib\spi;.\lib\uart;.\lib\gps;.\lib\adc;.\lib\btns;.\lib\timer;.\lib\Communication;..\STM_RDM_11v3</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -565,6 +565,11 @@
               <FileType>1</FileType>
               <FilePath>.\lib\spl\src\stm32l1xx_pwr.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32l1xx_dbgmcu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\lib\spl\src\stm32l1xx_dbgmcu.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -689,6 +694,16 @@
               <FileName>Communication_DM_STM.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>.\lib\Communication\Communication_DM_STM.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>stm32l1xx_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\lib\spl\src\stm32l1xx_flash.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32l1xx_flash_ramfunc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\lib\spl\src\stm32l1xx_flash_ramfunc.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -25,6 +25,7 @@
 #include "stm32l1xx_it.h"
 #include "main.h"
 
+
 /** @addtogroup Template_Project
   * @{
   */
@@ -133,10 +134,10 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
-void SysTick_Handler(void)
+/*void SysTick_Handler(void)
 {
     TimingDelay_Decrement();
-}
+}*/
 /******************************************************************************/
 /*                 STM32L1xx Peripherals Interrupt Handlers                   */
 /*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */
@@ -149,12 +150,13 @@ void SysTick_Handler(void)
   * @param  None
   * @retval None
   */
+  /*
 void DMA1_Channel1_IRQHandler    (void)
 {
   DMA_ClearFlag(DMA1_IT_TC1);
-  setADCDMA_TransferComplete();  /* set flag_ADCDMA_TransferComplete global flag */
+  setADCDMA_TransferComplete();  // set flag_ADCDMA_TransferComplete global flag 
 }
-
+*/
 
 /**
   * @brief  This function handles RTC Auto wake-up interrupt request.
@@ -163,10 +165,10 @@ void DMA1_Channel1_IRQHandler    (void)
   */
 void RTC_WKUP_IRQHandler(void)
 {
-  if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
+//  if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
   {
-    /* Clear RTC and EXTI interrupt flags */
-  	RTC_ClearITPendingBit(RTC_IT_WUT);
+    // Clear RTC and EXTI interrupt flags
+  	//RTC_ClearITPendingBit(RTC_IT_WUT);
   	EXTI_ClearITPendingBit(EXTI_Line20);    
   } 
 }
