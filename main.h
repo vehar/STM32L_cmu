@@ -6,10 +6,16 @@
 #include "stm32l1xx_rcc.h"
 #include "stm32l1xx_tim.h"
 #include "stm32l1xx_iwdg.h"
+#include "stm32l1xx_pwr.h"
+#include "stm32l1xx_exti.h"
+
+#include "stm32l1xx_it.h"
 
 #ifdef __cplusplus
  extern "C" {
 #endif 
+	 
+	
 	 
 #include "i2c_hard_stm32l1.h"
 #include "ina219.h"
@@ -66,3 +72,18 @@
 
 
 
+#define BUTT_1 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_4)== 0)
+#define BUTT_2 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0)== 0)	
+#define BUTT_3 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2)== 0)	
+#define BUTT_4 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3)== 0)	
+#define BUTT_5 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1)== 0)	
+#define BUTT_6 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_5)== 0)	//stik
+	
+#define LED_ON	GPIO_SetBits(GPIOB, GPIO_Pin_11)
+#define LED_OFF	GPIO_ResetBits(GPIOB, GPIO_Pin_11)	
+
+#define SPEAKER_ON	GPIO_SetBits(GPIOC, GPIO_Pin_6)
+#define SPEAKER_OFF	GPIO_ResetBits(GPIOC, GPIO_Pin_6)
+
+#define MAIN_RWR_ON	    GPIO_SetBits(GPIOB, GPIO_Pin_0)
+#define MAIN_RWR_OFF	GPIO_ResetBits(GPIOB, GPIO_Pin_0)

@@ -11,7 +11,7 @@ while (RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
 RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA , ENABLE);	
 
-GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_2; 
+GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5; //2, 3
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN; 
 GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 
 GPIO_Init(GPIOA, &GPIO_InitStructure); 	
@@ -112,9 +112,9 @@ void configureADC_Temp(void)
 
   /* ADC1 regular Temperature sensor channel16 and internal reference channel17 configuration */ 
 
-    for (ch_index = 1; ch_index <= MAX_TEMP_CHNL; ch_index++){
-      ADC_RegularChannelConfig(ADC1, ADC_Channel_16, ch_index, 
-                               ADC_SampleTime_384Cycles);
+    for (ch_index = 1; ch_index <= MAX_TEMP_CHNL; ch_index++)
+	{
+      ADC_RegularChannelConfig(ADC1, ADC_Channel_16, ch_index, ADC_SampleTime_384Cycles);
     }
 
   ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 17, ADC_SampleTime_384Cycles);

@@ -4,26 +4,34 @@ uint8_t btn_cnt[12], UpdateFlag[12], FlagCode[12];
 
 void Buttons_Init()
 {
-    GPIO_InitTypeDef GPIO_C; 
+    GPIO_InitTypeDef GPIO_C, GPIO_B; 
 
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC , ENABLE);
 	
-	  GPIO_C.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4| GPIO_Pin_5;
+	  GPIO_C.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4| GPIO_Pin_5 | GPIO_Pin_7;//5btns + encSw
     GPIO_C.GPIO_Mode = GPIO_Mode_IN;
     GPIO_C.GPIO_Speed = GPIO_Speed_40MHz;
     GPIO_C.GPIO_OType = GPIO_OType_PP;
-    GPIO_C.GPIO_PuPd = GPIO_PuPd_DOWN;
+    GPIO_C.GPIO_PuPd = GPIO_PuPd_UP;//GPIO_PuPd_DOWN
 	  GPIO_Init(GPIOC, &GPIO_C);
 
-	  GPIO_C.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+	  GPIO_C.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_12;// STM_Out(speaker) + ON_GPS_stm
     GPIO_C.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_C.GPIO_Speed = GPIO_Speed_40MHz;
     GPIO_C.GPIO_OType = GPIO_OType_PP;
-    GPIO_C.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_C.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	  GPIO_Init(GPIOC, &GPIO_C);
 	
-	  GPIO_SetBits(GPIOC, GPIO_Pin_6);
-	  GPIO_SetBits(GPIOC, GPIO_Pin_7);
+	
+		  GPIO_B.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_11;// on_akkum + red led 
+    GPIO_B.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_B.GPIO_Speed = GPIO_Speed_40MHz;
+    GPIO_B.GPIO_OType = GPIO_OType_PP;
+    GPIO_B.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	  GPIO_Init(GPIOB, &GPIO_B);
+	
+	 // GPIO_SetBits(GPIOC, GPIO_Pin_6);
+	//  GPIO_SetBits(GPIOC, GPIO_Pin_7);
 }
 
 void Btn_chk()

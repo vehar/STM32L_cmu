@@ -36,7 +36,7 @@ i2c_write_set_1b(DS3132_ADDRESS, RTC_MINUTES, 0x00);
 i2c_write_set_1b(DS3132_ADDRESS, RTC_HOURS,0x40);	
 }
 	
-uint16_t get_temp()
+uint16_t get_ds3231_temp()
 {
 
 temp_msb = i2c_read_1b(DS3132_ADDRESS, TEMP_MSB);	

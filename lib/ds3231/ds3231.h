@@ -33,4 +33,4 @@ uint8_t  get_min();
 uint8_t  get_hour();
 void set_time(uint8_t hour, uint8_t min, uint8_t sec);
 void Start_init();
-uint16_t get_temp();
+uint16_t get_ds3231_temp();

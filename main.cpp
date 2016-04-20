@@ -13,7 +13,103 @@
 void IWDG_Configuration(void);
 void configureADC_Temp(void);
 void Parse(uint8_t command);
+void RCC_Configuration(void);
+void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter);
 //***********************************
+
+
+
+/* Private typedef -----------------------------------------------------------*/
+
+typedef struct
+{
+    uint16_t VREF;
+    uint16_t TS_CAL_COLD;
+    uint16_t reserved;
+    uint16_t TS_CAL_HOT;
+} CALIB_TypeDef;
+
+
+
+/* Private define ------------------------------------------------------------*/
+
+#define DEBUG_SWD_PIN   /* needs to be commented if SWD debug pins are not in use to reduce power consumption*/
+
+#define FACTORY_CALIB_BASE        ((uint32_t)0x1FF80078)    /*!< Calibration Data Bytes base address */
+#define FACTORY_CALIB_DATA        ((CALIB_TypeDef *) FACTORY_CALIB_BASE)
+#define USER_CALIB_BASE           ((uint32_t)0x08080000)    /*!< USER Calibration Data Bytes base address */
+#define USER_CALIB_DATA           ((CALIB_TypeDef *) USER_CALIB_BASE)
+#define TEST_CALIB_DIFF           (int32_t) 50  /* difference of hot-cold calib
+                                               data to be considered as valid */ 
+
+#define HOT_CAL_TEMP 110
+#define COLD_CAL_TEMP  25
+
+#define DEFAULT_HOT_VAL 0x362
+#define DEFAULT_COLD_VAL 0x2A8
+
+#define MAX_TEMP_CHNL 16
+
+#define TS_110
+
+#define AVG_SLOPE 	1620
+#define V90		597000
+#define V_REF		3300000
+
+#define ADC_CONV_BUFF_SIZE 20
+
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+/*
+ADC_InitTypeDef ADC_InitStructure;
+ADC_CommonInitTypeDef ADC_CommonInitStructure;
+DMA_InitTypeDef DMA_InitStructure;
+
+__IO uint16_t 	ADC_ConvertedValue, T_StartupTimeDelay;
+
+uint32_t ADC_Result, INTemperature, refAVG, tempAVG, Address = 0;
+int32_t temperature_C; 
+
+uint16_t ADC_ConvertedValueBuff[ADC_CONV_BUFF_SIZE];
+
+char strDisp[20] ;
+
+DisplayState_TypeDef CurrentlyDisplayed = Display_TemperatureDegC;
+
+CALIB_TypeDef calibdata;    // field storing temp sensor calibration data 
+
+
+volatile bool flag_ADCDMA_TransferComplete;
+volatile bool flag_UserButton;
+
+static volatile uint32_t TimingDelay;
+
+__IO uint16_t   val_ref, val_25, val_110;
+
+__IO FLASH_Status FLASHStatus = FLASH_COMPLETE;
+
+*/
+RCC_ClocksTypeDef RCC_Clocks;
+/* Private function prototypes -----------------------------------------------*/
+void  RCC_Configuration(void);
+void  RTC_Configuration(void);
+void  Init_GPIOs (void);
+void  acquireTemperatureData(void);
+void  configureADC_Temp(void);
+void  configureDMA(void);
+void  powerDownADC_Temper(void);
+void  processTempData(void);
+void  configureWakeup (void);
+void  writeCalibData(CALIB_TypeDef* calibStruct);
+/*
+FunctionalState  testUserCalibData(void);
+FunctionalState  testFactoryCalibData(void);*/
+void insertionSort(uint16_t *numbers, uint32_t array_size);
+uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples);
+void clearUserButtonFlag(void);
+/*******************************************************************************/
+
+
 uint8_t  sizeofbuffer; 
 
 float y;
@@ -264,24 +360,142 @@ task_kill(pid);
 
 
 
+//My funktions_start
+void HSI_on_16MHz (void){
+   /*  internal HSI on 16MHz */  
+  RCC->CR |= RCC_CR_HSION; 
+  while(!(RCC_CR_HSION)); //wait until on
+  RCC->CFGR |= RCC_CFGR_SW_HSI; //clock sourse is SYSCLK  HSI
+  RCC->CR &= ~RCC_CR_MSION; //MSI turn off.   
+}
+
+void All_clk_On(void){ //
+  RCC->AHBENR  |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN;
+  RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_I2C1EN | RCC_APB1ENR_I2C2EN | RCC_APB1ENR_USART2EN | RCC_APB1ENR_SPI2EN ;
+  RCC->APB2ENR |= RCC_APB2ENR_USART1EN | RCC_APB2ENR_SPI1EN;
+}
+
+
+#define AIRCR_VECTKEY_MASK    ((uint32_t)0x05FA0000)
+void NVIC_GenerateSystemReset(void)
+{
+  SCB->AIRCR = AIRCR_VECTKEY_MASK | (uint32_t)0x04;
+}
+
+void Timer2_init_vs_irq(void){
+     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;  // Enable TIM2 Periph clock
+     
+    TIM2->PSC = SystemCoreClock / 1000 - 1; // 1000 tick/sec
+    TIM2->ARR = 100;  // 1 Interrupt/0.1 sec
+  
+    TIM2->DIER |= TIM_DIER_UIE; // Enable tim2 interrupt
+    TIM2->CR1 |= TIM_CR1_CEN;   // Start count
+    
+  //  NVIC_SetPriority(TIM2_IRQn, 1);
+    NVIC_EnableIRQ(TIM2_IRQn);  // Enable IRQ 
+}
+
+
+void Button_init_vs_irq (void){
+	
+ //  RCC->AHBENR  |= RCC_AHBENR_GPIOCEN; //enable gpioC
+ //  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;  /*!< System Configuration SYSCFG clock enable */
+  /// GPIOA->CRH |=  GPIO_CRH_MODE0_1;
+   //GPIOA->PUPDR |=  GPIO_PUPDR_PUPDR0_1; //BUTTON F in - pull down
+   
+  /// SYSCFG->EXTICR1 |= SYSCFG_EXTICR1_EXTI1 | SYSCFG_EXTICR1_EXTI1_PA;//?
+   
+ //  EXTI->EMR |= EXTI_EMR_MR0 ;// PIN 0     
+ //  EXTI->IMR |= EXTI_IMR_MR0; //??? ??????? 0 
+ //  EXTI->FTSR|= EXTI_FTSR_TR0 ; //???????????? - ?? ????????? ??????
+   
+   ///SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA; // Connect EXTI line 0 to PA.0//?
+  /// RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+   
+ //  NVIC_EnableIRQ(EXTI0_IRQn); // Enable IRQn
+//--------------------------------------------------------------------------------------------------------------
+  EXTI_InitTypeDef EXTI_InitStructure;
+  NVIC_InitTypeDef NVIC_InitStructure;
+	
+	RCC->AHBENR  |= RCC_AHBENR_GPIOCEN; //enable gpioC
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;  /*!< System Configuration SYSCFG clock enable */
+	
+	
+	//EXTI_DeInit();
+	
+ //Select Button pin as input source for EXTI Line 
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource0);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource1);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource2);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource3);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource4);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource5);
+
+   //Configure EXT1 Line 0 in interrupt mode trigged on Rising edge 
+  EXTI_InitStructure.EXTI_Line |=  EXTI_Line0 | EXTI_Line1 | EXTI_Line2 | EXTI_Line3 | EXTI_Line4 | EXTI_Line5;  // 
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;  
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+   //Enable and set EXTI.. Interrupt to the lowest priority 
+  NVIC_InitStructure.NVIC_IRQChannel |=  EXTI0_IRQn | EXTI1_IRQn | EXTI2_IRQn | EXTI3_IRQn | EXTI4_IRQn | EXTI9_5_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0E;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0E;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure); 
+
+
+//fall into empty? INT handler.......!!!!!?????
+
+	/*NVIC_EnableIRQ (EXTI0_IRQn);
+	NVIC_EnableIRQ (EXTI1_IRQn);
+	NVIC_EnableIRQ (EXTI2_IRQn);
+	NVIC_EnableIRQ (EXTI3_IRQn);
+	NVIC_EnableIRQ (EXTI4_IRQn);
+	NVIC_EnableIRQ (EXTI9_5_IRQn);	*/
+	
+}
+
+
+
+//RCC_ClocksTypeDef* RCC_Clocks;
+
+
 void init_mcu_fu()
 {
-	uart_init();	
-	gps_init();		
+  //SystemInit();
+	 /*!< At this stage the microcontroller clock setting is already configured, 
+       this is done through SystemInit() function which is called from startup
+       file (startup_stm32l1xx_md.s) before to branch to application main.
+       To reconfigure the default setting of SystemInit() function, refer to
+       system_stm32l1xx.c file
+     */ 
+	
+  //  HSI_on_16MHz(); 
+	
+    All_clk_On(); 
+ //Timer2_init_vs_irq(); //ovr_irq
+	
+	
+	uart_init();		
 	init_timer();	
 	init_I2C1();	
 	//Spi_hw_init(); //init in Comm obj
-	Buttons_Init();
+	
+	Buttons_Init(); //! todo 
+	Button_init_vs_irq();
+	
 	configureADC_Temp();//HV
 	adc_init();
-	hvl();
+	//hvl();
 		
 	delay();
-		
-	INA_Conf();	
+	//gps_init();		
+	//INA_Conf();	
 	
 #ifdef WDG_ON
-	IWDG_Configuration();	
+	//IWDG_Configuration();	
 #endif	
 }
 
@@ -293,21 +507,237 @@ void init_mcu_fu()
 **************** I *******************
 **************** N ********************/
 
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+#define CM3_SYSTICK_ENABLE				(1 << 0)
+#define CM3_SYSTICK_CLKSOURCE			(1 << 2)
+#define CM3_SYSTICK_COUNTFLAG			(1 << 16)
+
+void stm32_delay_init(void)
+{
+	SysTick->CTRL = CM3_SYSTICK_CLKSOURCE;
+	SysTick->VAL = 0;
+}
+
+void stm32_delay_delayus_do(uint32_t tick)
+{
+	uint32_t dly_tmp;
+	
+	stm32_delay_init();
+	while (tick)
+	{
+		dly_tmp = (tick > ((1 << 24) - 1)) ? ((1 << 24) - 1) : tick;
+		SysTick->LOAD = dly_tmp;
+		SysTick->CTRL |= CM3_SYSTICK_ENABLE;
+		while (!(SysTick->CTRL & CM3_SYSTICK_COUNTFLAG));
+		stm32_delay_init();
+		tick -= dly_tmp;
+	}
+}
+
+void stm32_delay_delayus(uint16_t us) 
+{
+	//stm32_delay_delayus_do(us * (stm32_info.sys_freq_hz / (1000 * 1000)));
+	stm32_delay_delayus_do(us * (RCC_Clocks.SYSCLK_Frequency / (1000 * 1000)));
+}
+
+void stm32_delay_delayms(uint16_t ms)
+{
+	//stm32_delay_delayus_do(ms * (stm32_info.sys_freq_hz / 1000));
+	stm32_delay_delayus_do(ms * (RCC_Clocks.SYSCLK_Frequency / 1000));
+}
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+
+uint32_t f_ButtPressed = 0;
+bool f_PowActive = false;
+bool f_SystemOk = false;
+
+
+void Proc_Pow_ON(void)
+{
+ if(f_PowActive == false)
+	{			
+	f_PowActive = true;
+		LED_ON;
+	MAIN_RWR_ON;
+	BeepDelauyed(10,10,5);	
+	}
+}
+
+void Proc_Pow_OFF(void)
+{
+ if(f_PowActive == true)
+	{			
+	f_PowActive = false;
+	BeepDelauyed(1,5,5);
+	MAIN_RWR_OFF;	
+		LED_OFF;
+	}
+}
+
+
+bool Axel_temperature_check(void)
+{
+	
+}
+
+#define STM_TEMPERATURE_MIN  0 //C
+#define STM_TEMPERATURE_MAX  90 //C
+
+bool STM_temperature_check(void)//TODO need debug!
+{
+ uint32_t  data = 0;
+float	Current_Temperature = 0;
+	
+ ADC_RegularChannelConfig(ADC1, ADC_Channel_16,1 ,ADC_SampleTime_384Cycles);
+ ADC_SoftwareStartConv(ADC1);
+	
+	//stm32_delay_delayms(1);
+	
+ data  = ADC1->DR;
+	
+	Current_Temperature = data;
+                        Current_Temperature  = Current_Temperature * 3.3 / 4095;  // 3.3V / (2^12-1) 
+                        Current_Temperature -= 0.760;       // 25°C  25°C, V = 0.760V)
+                        Current_Temperature /= 0.0025;       //  25°C (??? STM32F407 2.5mV / 1°C)
+                       // Current_Temperature += 25.0;        // 
+						Current_Temperature -=273;
+	
+	
+	if((Current_Temperature > STM_TEMPERATURE_MIN)&&(Current_Temperature <= STM_TEMPERATURE_MAX)) 
+		return true;
+	else 
+		return false;
+}
 
 
 
+
+#define AKK_VOLTAGE_MIN  63 //6.3v
+#define AKK_VOLTAGE_MAX  74 //7.4v
+
+bool Batt_voltage_check(void)
+{
+	uint32_t data = INA219_busVoltageRaw();
+	if((data > AKK_VOLTAGE_MIN)&&(data <= AKK_VOLTAGE_MAX)) 
+		return true;
+	else 
+		return false;
+}
+
+#define AKK_CURRENT_MIN  100 //100mA
+#define AKK_CURRENT_MAX  500 //500mA
+bool Batt_current_check(void)
+{
+	uint32_t data = INA219_shuntCurrent_Raw();
+	if((data > AKK_CURRENT_MIN)&&(data <= AKK_CURRENT_MAX)) 
+		return true;
+	else 
+		return false;
+}
+
+uint32_t Prelaunch_verification(void)
+{
+	uint32_t result = 0;
+	
+	RCC_GetClocksFreq(&RCC_Clocks);//!!!!!!! must be 16MHz
+	
+	if(RCC_Clocks.SYSCLK_Frequency == 16000000) 	{result ++;}
+	if(STM_temperature_check()) 	{result ++;}
+	if(Axel_temperature_check()) 	{result ++;}
+//	if(Batt_voltage_check()) 		{result ++;}
+	
+	
+	if(result == 3){ f_SystemOk = true;} //if all is ok - set f_SystemOk flag & ready to start
+	else f_SystemOk = false;
+	
+	return result;
+}
+
+uint32_t AdcData = 0;
 int main(void) 
 {
-	Communication Comm;		//Communication protocol vs STM
+	//Communication Comm;		//Communication protocol vs STM
 
+//////////////////////////////////////////////////////////////////////////////////
+ ///////////////////////On-StartTestSection_start////////////////////////////////// 
+  RCC_Configuration();   //Configure Clocks for Application need 
+  
+  //PWR_VoltageScalingConfig(PWR_VoltageScaling_Range1);    //Set internal voltage regulator to 1.8V 
+  //while (PWR_GetFlagStatus(PWR_FLAG_VOS) != RESET) ;   //Wait Until the Voltage Regulator is ready 
+ ///////////////////////On-StartTestSection_end//////////////////////////////////// 
+ //////////////////////////////////////////////////////////////////////////////////
+	
 	init_mcu_fu();
 
-	__enable_irq();	
-		
+/*	__enable_irq();			
 	NVIC_EnableIRQ(SPI2_IRQn);
-
 	SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_RXNE, ENABLE);
-		
+*/		
+
+	Prelaunch_verification();
+	
+	if(f_SystemOk) //system & device ok	
+	{
+		Proc_Pow_ON();
+	}
+	
+while(1)
+{
+	
+	STM_temperature_check();//DEBUG!
+	
+     AdcData = ADC1->JDR1;//	 stm_adc_5v_DATA: //0x03
+	//AdcData = AdcData * 3.3 / 4095;
+	 AdcData = ADC1->JDR2;// stm_adc_140v_DATA: //0x04
+	//AdcData = AdcData * 3.3 / 4095;
+	
+	if(BUTT_1) //1
+	{
+		LED_ON;	
+		//f_ButtPressed = 1;
+		BeepDelauyed(1,1,2);
+	}
+	
+	if(BUTT_2) //2
+	{
+		LED_ON;	
+		STM_temperature_check();
+	}
+	
+	if(BUTT_3) //3
+	{
+		//LED_ON;	
+	  Proc_Pow_ON();
+
+	}
+	
+	if(BUTT_4) //4
+	{
+	  Proc_Pow_OFF();
+	}
+	
+	if(BUTT_5) //5
+	{
+		LED_OFF;	
+		BeepDelauyed(1,1,6);
+	}
+	
+	if(BUTT_6) //stik
+	{
+		NVIC_GenerateSystemReset();	//LED_OFF;	
+	}
+	
+	/*if(f_ButtPressed) //10-10 pisk
+	{
+		LED_ON;	
+		BeepDelauyed(100,100);	
+	}*/
+	
+}
+	
 	task_add(*IWDG_ReloadCounter);		
 	task_add(*tmg_dm);
 		
@@ -316,6 +746,16 @@ int main(void)
 
 //************************************
 
+void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter) 
+{
+	for(uint32_t i = 0; i<iter; i++)
+	{
+		SPEAKER_ON;
+	stm32_delay_delayus(time_on);
+		SPEAKER_OFF;
+	stm32_delay_delayus(time_off);	
+	}
+}
 
 void SPI2_IRQHandler()//TODO: add transmition!
 {	
@@ -359,7 +799,64 @@ void SPI2_IRQHandler()//TODO: add transmition!
   
 }
 //************************************
-	
+ void HardFault_Handler(void)
+{	
+	NVIC_GenerateSystemReset();	
+}
+
+ void EXTI0_IRQHandler(void)
+{
+  /* Disable general interrupts */
+  //disableInterrupts();
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line0);
+  //enableInterrupts();
+	__enable_irq();
+}
+
+ void EXTI1_IRQHandler(void)
+{
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line1);
+	__enable_irq();
+}
+
+ void EXTI2_IRQHandler(void)
+{
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line2);
+	__enable_irq();
+}
+ void EXTI3_IRQHandler(void)
+{
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line3);
+	__enable_irq();
+}
+ void EXTI4_IRQHandler(void)
+{
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line4);
+	__enable_irq();
+}
+ void EXTI9_5_IRQHandler(void)
+{
+	__disable_irq();
+ 
+    
+  EXTI_ClearITPendingBit(EXTI_Line5);
+	__enable_irq();
+}
 
 
 void IWDG_Configuration(void)
@@ -417,7 +914,7 @@ switch (command)
      break;    
     
     case TEMPERATURE://0xB3
-        data = get_temp();	
+        data = get_ds3231_temp();	
 	 break;
 	
 	 case STM_TEMPERATURE://0xB4 //TODO need debug!
@@ -573,3 +1070,42 @@ if(command == 0xB5)
     set_time(time_buf[0], time_buf[1], time_buf[2]);
     }
 }
+
+/**
+  * @brief  Configures the different system clocks.
+  * @param  None
+  * @retval None
+ */ 
+void RCC_Configuration(void)
+{  
+  RCC_HSICmd(ENABLE);//Enable HSI Clock  
+  while (RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);//!< Wait till HSI is ready  
+  RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI); //Set HSI as sys clock   
+  RCC_MSIRangeConfig(RCC_MSIRange_6);//Set MSI clock range to ~4.194MHz*/  
+  
+  RCC_HSEConfig(RCC_HSE_OFF);  /*Disable HSE*/
+  if(RCC_GetFlagStatus(RCC_FLAG_HSERDY) != RESET )
+  {    
+    while(1); //Stay in infinite loop if HSE is not disabled*/
+  }
+  
+    /* Enable  comparator clock LCD and PWR mngt */
+  RCC_APB1PeriphClockCmd(/*RCC_APB1Periph_LCD |*/ RCC_APB1Periph_PWR, ENABLE);
+    
+  /* Enable ADC clock & SYSCFG */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG, ENABLE);
+
+  	//Enable the GPIOs clocks 
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC| RCC_AHBPeriph_GPIOD| RCC_AHBPeriph_GPIOE| RCC_AHBPeriph_GPIOH, ENABLE);      
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_COMP |  RCC_APB1Periph_PWR , ENABLE);   //Enable comparator and PWR mngt clocks
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG , ENABLE);//Enable ADC & SYSCFG clocks  
+}
+
+
+
+
+//BeepDelauyed(1,1);	    //ultra
+//BeepDelauyed(10,10);	    //pisk loud
+//BeepDelauyed(100,100);	//norm
+//BeepDelauyed(100,200);	//hruk	
+//BeepDelauyed(200,200);	//hruk
