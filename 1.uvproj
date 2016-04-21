@@ -705,6 +705,21 @@
               <FileType>1</FileType>
               <FilePath>.\lib\spl\src\stm32l1xx_flash_ramfunc.c</FilePath>
             </File>
+            <File>
+              <FileName>math_helpers.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\math_helpers.c</FilePath>
+            </File>
+            <File>
+              <FileName>board_helpers.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\board_helpers.c</FilePath>
+            </File>
+            <File>
+              <FileName>temperature_measurement.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\temperature_measurement.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

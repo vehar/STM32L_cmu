@@ -1,6 +1,19 @@
 #include "main.h"
 #include "board.h"//In main.c
 
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+	 
+#include "math_helpers.h"	 
+#include "board_helpers.h"	
+#include "temperature_measurement.h"
+	 
+#ifdef __cplusplus
+}
+#endif
+
+
 #include "Communication_DM_STM.h"
 
 
@@ -23,83 +36,32 @@ void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter);
 
 
 
-/* Private typedef -----------------------------------------------------------*/
-
-typedef struct
-{
-    uint16_t VREF;
-    uint16_t TS_CAL_COLD;
-    uint16_t reserved;
-    uint16_t TS_CAL_HOT;
-} CALIB_TypeDef;
-
-
-
 /* Private define ------------------------------------------------------------*/
 
 #define DEBUG_SWD_PIN   /* needs to be commented if SWD debug pins are not in use to reduce power consumption*/
 
-#define FACTORY_CALIB_BASE        ((uint32_t)0x1FF80078)    /*!< Calibration Data Bytes base address */
-#define FACTORY_CALIB_DATA        ((CALIB_TypeDef *) FACTORY_CALIB_BASE)
-#define USER_CALIB_BASE           ((uint32_t)0x08080000)    /*!< USER Calibration Data Bytes base address */
-#define USER_CALIB_DATA           ((CALIB_TypeDef *) USER_CALIB_BASE)
-#define TEST_CALIB_DIFF           (int32_t) 50  /* difference of hot-cold calib
-                                               data to be considered as valid */ 
-
-#define HOT_CAL_TEMP 110
-#define COLD_CAL_TEMP  25
-
-#define DEFAULT_HOT_VAL 0x362
-#define DEFAULT_COLD_VAL 0x2A8
-
-#define MAX_TEMP_CHNL 16
-
-#define TS_110
-
-#define AVG_SLOPE 	1620
-#define V90		597000
-#define V_REF		3300000
-
-#define ADC_CONV_BUFF_SIZE 20
-
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-
-/*
-
-*/
-
-__IO uint16_t 	ADC_ConvertedValue, T_StartupTimeDelay;
-
-uint32_t ADC_Result, INTemperature, refAVG, tempAVG, Address = 0;
-int32_t temperature_C; 
-
-uint16_t ADC_ConvertedValueBuff[ADC_CONV_BUFF_SIZE];
-
-
-CALIB_TypeDef calibdata;    // field storing temp sensor calibration data 
-
 
  ADC_InitTypeDef ADC_InitStructure;
  ADC_CommonInitTypeDef ADC_CommonInitStructure;
- DMA_InitTypeDef DMA_InitStructure;
+ 
 
 volatile bool flag_ADCDMA_TransferComplete;
 volatile bool flag_UserButton;
 
 static volatile uint32_t TimingDelay;
 
-__IO uint16_t   val_ref, val_25, val_110;
 
-__IO FLASH_Status FLASHStatus = FLASH_COMPLETE;
+extern int32_t temperature_C; 
+
+extern CALIB_TypeDef calibdata;    // field storing temp sensor calibration data 
+extern DMA_InitTypeDef DMA_InitStructure;
 
 
 RCC_ClocksTypeDef RCC_Clocks;
 /* Private function prototypes -----------------------------------------------*/
 void  RCC_Configuration(void);
-void  RTC_Configuration(void);
 void  Init_GPIOs (void);
-void  acquireTemperatureData(void);
+/*void  acquireTemperatureData(void);
 void  configureADC_Temp(void);
 void  configureDMA(void);
 void  powerDownADC_Temper(void);
@@ -108,11 +70,12 @@ void  configureWakeup (void);
 void  writeCalibData(CALIB_TypeDef* calibStruct);
 
 FunctionalState  testUserCalibData(void);
-FunctionalState  testFactoryCalibData(void);
+FunctionalState  testFactoryCalibData(void);*/
 
-void insertionSort(uint16_t *numbers, uint32_t array_size);
-uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples);
-void clearUserButtonFlag(void);
+/*
+extern void insertionSort(uint16_t *numbers, uint32_t array_size);
+extern uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples);
+extern void HSI_on_16MHz(void);*/
 /*******************************************************************************/
 
 
@@ -283,24 +246,7 @@ void DM_reciev()
 	NVIC_EnableIRQ(SPI2_IRQn);
 }
 
-/*
-void hvl()
-{
-GPIO_InitTypeDef gpio;
-RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
 
-	gpio.GPIO_Pin = GPIO_Pin_4;
-    gpio.GPIO_Mode = GPIO_Mode_OUT;
-    gpio.GPIO_Speed = GPIO_Speed_40MHz;
-    gpio.GPIO_OType = GPIO_OType_PP;
-    //gpio.GPIO_PuPd = GPIO_PuPd_DOWN;
-
-	 GPIO_Init(GPIOA,&gpio);
-
-	// GPIO_ResetBits(GPIOA, GPIO_Pin_4);
-	GPIO_SetBits(GPIOA, GPIO_Pin_4);
-}
-*/
 
 void Current_chk()
 {
@@ -367,45 +313,10 @@ task_kill(pid);
 
 
 //My funktions_start
-void HSI_on_16MHz (void){
-   /*  internal HSI on 16MHz */  
-  RCC->CR |= RCC_CR_HSION; 
-  while(!(RCC_CR_HSION)); //wait until on
-  RCC->CFGR |= RCC_CFGR_SW_HSI; //clock sourse is SYSCLK  HSI
-  RCC->CR &= ~RCC_CR_MSION; //MSI turn off.   
-}
-
-void All_clk_On(void) //TODO: delete duplications!
-{ 	
-		//Enable the GPIOs clocks 
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC| RCC_AHBPeriph_GPIOD| RCC_AHBPeriph_GPIOE| RCC_AHBPeriph_GPIOH, ENABLE);      
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_COMP |  RCC_APB1Periph_PWR , ENABLE);   //Enable comparator and PWR mngt clocks
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_SYSCFG , ENABLE);//Enable ADC & SYSCFG clocks  
-
-  RCC->AHBENR  |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN;
-  RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_I2C1EN | RCC_APB1ENR_I2C2EN | RCC_APB1ENR_USART2EN | RCC_APB1ENR_SPI2EN ;
-  RCC->APB2ENR |= RCC_APB2ENR_USART1EN | RCC_APB2ENR_SPI1EN;
-}
 
 
-#define AIRCR_VECTKEY_MASK    ((uint32_t)0x05FA0000)
-void NVIC_GenerateSystemReset(void)
-{
-  SCB->AIRCR = AIRCR_VECTKEY_MASK | (uint32_t)0x04;
-}
 
-void Timer2_init_vs_irq(void){
-     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;  // Enable TIM2 Periph clock
-     
-    TIM2->PSC = SystemCoreClock / 1000 - 1; // 1000 tick/sec
-    TIM2->ARR = 100;  // 1 Interrupt/0.1 sec
-  
-    TIM2->DIER |= TIM_DIER_UIE; // Enable tim2 interrupt
-    TIM2->CR1 |= TIM_CR1_CEN;   // Start count
-    
-  //  NVIC_SetPriority(TIM2_IRQn, 1);
-    NVIC_EnableIRQ(TIM2_IRQn);  // Enable IRQ 
-}
+
 
 
 void Button_init_vs_irq (void){
@@ -471,8 +382,6 @@ void Button_init_vs_irq (void){
 
 
 
-//RCC_ClocksTypeDef* RCC_Clocks;
-
 
 void init_mcu_fu()
 {
@@ -484,7 +393,8 @@ void init_mcu_fu()
        system_stm32l1xx.c file
      */ 
 	
-  // HSI_on_16MHz(); 
+   //HSI_on_16MHz(); 
+	
 	
     All_clk_On(); 
  //Timer2_init_vs_irq(); //ovr_irq
@@ -518,50 +428,27 @@ void init_mcu_fu()
 **************** I *******************
 **************** N ********************/
 
-//------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------
-#define CM3_SYSTICK_ENABLE				(1 << 0)
-#define CM3_SYSTICK_CLKSOURCE			(1 << 2)
-#define CM3_SYSTICK_COUNTFLAG			(1 << 16)
 
-void stm32_delay_init(void)
-{
-	SysTick->CTRL = CM3_SYSTICK_CLKSOURCE;
-	SysTick->VAL = 0;
-}
-
-void stm32_delay_delayus_do(uint32_t tick)
-{
-	uint32_t dly_tmp;
-	
-	stm32_delay_init();
-	while (tick)
-	{
-		dly_tmp = (tick > ((1 << 24) - 1)) ? ((1 << 24) - 1) : tick;
-		SysTick->LOAD = dly_tmp;
-		SysTick->CTRL |= CM3_SYSTICK_ENABLE;
-		while (!(SysTick->CTRL & CM3_SYSTICK_COUNTFLAG));
-		stm32_delay_init();
-		tick -= dly_tmp;
-	}
-}
-
-void stm32_delay_delayus(uint16_t us) 
-{
-	//stm32_delay_delayus_do(us * (stm32_info.sys_freq_hz / (1000 * 1000)));
-	stm32_delay_delayus_do(us * (RCC_Clocks.SYSCLK_Frequency / (1000 * 1000)));
-}
-
-void stm32_delay_delayms(uint16_t ms)
-{
-	//stm32_delay_delayus_do(ms * (stm32_info.sys_freq_hz / 1000));
-	stm32_delay_delayus_do(ms * (RCC_Clocks.SYSCLK_Frequency / 1000));
-}
-//------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------
 
 
 uint32_t f_ButtPressed = 0;
+
+
+#define F_BUTT_0 0
+#define F_BUTT_1 1
+#define F_BUTT_2 2
+#define F_BUTT_3 3
+#define F_BUTT_4 4
+#define F_BUTT_5 5
+#define F_BUTT_6 6
+#define F_BUTT_7 7
+
+	
+#define BUTT_F_SET(button) 		(f_ButtPressed|=(1<<button))
+#define BUTT_F_RESET(button) 	(f_ButtPressed&=(~(1<<button)))
+#define BUTT_F_IS_SET(button)	((f_ButtPressed&(1<<button)) != 0)
+#define BUTT_F_IS_RESET(button) ((f_ButtPressed&(1<<button)) == 0)
+
 bool f_PowActive = false;
 bool f_SystemOk = false;
 
@@ -589,50 +476,36 @@ void Proc_Pow_OFF(void)
 }
 
 
-bool Axel_temperature_check(void)
+bool Axel_temperature_check(void) //TODO: implement
 {
-	
+	return true;
 }
 
 #define STM_TEMPERATURE_MIN  0 //C
-#define STM_TEMPERATURE_MAX  90 //C
-
-bool STM_temperature_check(void)//TODO need debug!
+#define STM_TEMPERATURE_MAX  85 //C
+bool STM_temperature_check(void)
 {
- uint32_t  data = 0;
-float	Current_Temperature = 0;
+  acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
+ 
+	for(uint32_t i = 0; i< 5000; i++); //dummy delay for end of conv
 	
- ADC_RegularChannelConfig(ADC1, ADC_Channel_16,1 ,ADC_SampleTime_384Cycles);
- ADC_SoftwareStartConv(ADC1);
+	processTempData(); // Process mesured Temperature data - calculate average temperature value in °C 
+      //  average temperature value in °C  
+	temperature_C = temperature_C + 31; //31 = temp bug fix! //TODO: fix it
 	
-	//stm32_delay_delayms(1);
-	/*
- data  = ADC1->DR;
-	
-	Current_Temperature = data;
-                        Current_Temperature  = Current_Temperature * 3.3 / 4095;  // 3.3V / (2^12-1) 
-                        Current_Temperature -= 0.760;       // 25°C  25°C, V = 0.760V)
-                        Current_Temperature /= 0.0025;       //  25°C (??? STM32F407 2.5mV / 1°C)
-                       // Current_Temperature += 25.0;        // 
-						Current_Temperature -=273;
-	
-	
-	if((Current_Temperature > STM_TEMPERATURE_MIN)&&(Current_Temperature <= STM_TEMPERATURE_MAX)) 
+	if((temperature_C >= STM_TEMPERATURE_MIN) &&(temperature_C < STM_TEMPERATURE_MAX))
 		return true;
-	else */
+	else 
 		return false;
 }
 
 
-
-
 #define AKK_VOLTAGE_MIN  63 //6.3v
 #define AKK_VOLTAGE_MAX  74 //7.4v
-
 bool Batt_voltage_check(void)
 {
 	uint32_t data = INA219_busVoltageRaw();
-	if((data > AKK_VOLTAGE_MIN)&&(data <= AKK_VOLTAGE_MAX)) 
+	if((data > AKK_VOLTAGE_MIN)&&(data < AKK_VOLTAGE_MAX)) 
 		return true;
 	else 
 		return false;
@@ -643,7 +516,7 @@ bool Batt_voltage_check(void)
 bool Batt_current_check(void)
 {
 	uint32_t data = INA219_shuntCurrent_Raw();
-	if((data > AKK_CURRENT_MIN)&&(data <= AKK_CURRENT_MAX)) 
+	if((data > AKK_CURRENT_MIN)&&(data < AKK_CURRENT_MAX)) 
 		return true;
 	else 
 		return false;
@@ -658,7 +531,7 @@ uint32_t Prelaunch_verification(void)
 	if(RCC_Clocks.SYSCLK_Frequency == 16000000) 	{result ++;}
 	if(STM_temperature_check()) 	{result ++;}
 	if(Axel_temperature_check()) 	{result ++;}
-//	if(Batt_voltage_check()) 		{result ++;}
+	//if(Batt_voltage_check()) 		{result ++;}
 	
 	
 	if(result == 3){ f_SystemOk = true;} //if all is ok - set f_SystemOk flag & ready to start
@@ -719,13 +592,16 @@ int main(void)
 	SysTick_Config(RCC_Clocks.HCLK_Frequency / 2000); // Configure SysTick IRQ and SysTick Timer to generate interrupts every 500µs
 
 
-	if(f_SystemOk) //system & device ok	
+/*	if(f_SystemOk) //system & device ok	
 	{
 		Proc_Pow_ON();
 	}
-	
+*/	
 	//acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
 	
+	//Proc_Pow_ON();
+
+		
 while(1)
 {
 	
@@ -736,45 +612,48 @@ while(1)
 	// AdcData = ADC1->JDR2;// stm_adc_140v_DATA: //0x04
 	//AdcData = AdcData * 3.3 / 4095;
 	
-	acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
-  processTempData(); // Process mesured Temperature data - calculate average temperature value in °C 
-      //  average temperature value in °C  
-	temperature_C = temperature_C + 31; //31 = temp bug fix!
+
 	
 	
 	if(BUTT_1) //1
 	{
-		LED_ON;	
-		//f_ButtPressed = 1;
+		BUTT_F_SET(F_BUTT_1);
+		
+		LED_ON;			
 		BeepDelauyed(1,1,2);
 	}
 	
 	if(BUTT_2) //2
 	{
+		BUTT_F_SET(F_BUTT_2);
 		LED_ON;	
 		STM_temperature_check();
 	}
 	
 	if(BUTT_3) //3
 	{
-		//LED_ON;	
+		BUTT_F_SET(F_BUTT_3);
+		LED_ON;	
 	  Proc_Pow_ON();
 
 	}
 	
 	if(BUTT_4) //4
 	{
+		BUTT_F_SET(F_BUTT_4);
 	  Proc_Pow_OFF();
 	}
 	
 	if(BUTT_5) //5
 	{
+		BUTT_F_SET(F_BUTT_5);
 		LED_OFF;	
 		BeepDelauyed(1,1,6);
 	}
 	
 	if(BUTT_6) //stik
 	{
+		BUTT_F_SET(F_BUTT_6);
 		NVIC_GenerateSystemReset();	//LED_OFF;	
 	}
 	
@@ -783,6 +662,7 @@ while(1)
 		LED_ON;	
 		BeepDelauyed(100,100);	
 	}*/
+	
 	
 }
 	
@@ -794,164 +674,9 @@ while(1)
 
 //************************************
 
-void insertionSort(uint16_t *numbers, uint32_t array_size) 
+void butt_handler (void)
 {
-	uint32_t i, j;
-	uint32_t index;
-
-  for (i=1; i < array_size; i++) {
-    index = numbers[i];
-    j = i;
-    while ((j > 0) && (numbers[j-1] > index)) {
-      numbers[j] = numbers[j-1];
-      j = j - 1;
-    }
-    numbers[j] = index;
-  }
-}
-
-uint32_t interquartileMean(uint16_t *array, uint32_t numOfSamples)
-{
-    uint32_t sum=0;
-    uint32_t  index, maxindex;
-    /* discard  the lowest and the highest data samples */ 
-	maxindex = 3 * numOfSamples / 4;
-    for (index = (numOfSamples / 4); index < maxindex; index++){
-            sum += array[index];
-    }
-	/* return the mean value of the remaining samples value*/
-    return ( sum / (numOfSamples / 2) );
-}
-
-
-
-FunctionalState  testUserCalibData(void)
-{
-  int32_t testdiff;
-  FunctionalState retval = DISABLE;
-  
-  testdiff = USER_CALIB_DATA->TS_CAL_HOT - USER_CALIB_DATA->TS_CAL_COLD;
-  
-  if ( testdiff > TEST_CALIB_DIFF )    retval = ENABLE;
-  
-  return retval;
-}
-
-FunctionalState  testFactoryCalibData(void)
-{
-  int32_t testdiff;
-  FunctionalState retval = DISABLE;
-  
-  testdiff = FACTORY_CALIB_DATA->TS_CAL_HOT - FACTORY_CALIB_DATA->TS_CAL_COLD;
-  
-  if ( testdiff > TEST_CALIB_DIFF )    retval = ENABLE;
-  
-  return retval;
-}
-
-void  writeCalibData(CALIB_TypeDef* calibStruct)
-{
-
-  uint32_t  Address = 0;
-  uint32_t  dataToWrite;
-  
-  /* Unlock the FLASH PECR register and Data EEPROM memory */
-  DATA_EEPROM_Unlock();
-  
-  /* Clear all pending flags */      
-  FLASH_ClearFlag(FLASH_FLAG_EOP|FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR
-                  | FLASH_FLAG_SIZERR | FLASH_FLAG_OPTVERR);	
-  
-  /*  Data EEPROM Fast Word program of FAST_DATA_32 at addresses defined by 
-      DATA_EEPROM_START_ADDR and DATA_EEPROM_END_ADDR */  
- 
-  Address = (uint32_t) USER_CALIB_DATA;
-
-
-  dataToWrite = 0x00;
-  dataToWrite = (uint32_t)(calibStruct->TS_CAL_COLD) << 16;
-  
-  FLASHStatus = DATA_EEPROM_ProgramWord(Address, dataToWrite);
-
-  if(FLASHStatus != FLASH_COMPLETE)
-  {
-    while(1); /* stay in loop in case of crittical programming error */
-  }
-
-  Address += 4;
-
-  dataToWrite = 0x00;
-  dataToWrite = (uint32_t)(calibStruct->TS_CAL_HOT) << 16;
-  
-  FLASHStatus = DATA_EEPROM_ProgramWord(Address, dataToWrite);
-  
-}
-
-
-void configureDMA(void)
-{
-  /* Declare NVIC init Structure */
-  NVIC_InitTypeDef NVIC_InitStructure;
-  
-  /* Enable DMA1 clock */
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-
-  /* De-initialise  DMA */
-  DMA_DeInit(DMA1_Channel1);
-  
-  /* DMA1 channel1 configuration */
-  DMA_StructInit(&DMA_InitStructure);
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);	     // Set DMA channel Peripheral base address to ADC Data register
-  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&ADC_ConvertedValueBuff;  // Set DMA channel Memeory base addr to ADC_ConvertedValueBuff address
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;                         // Set DMA channel direction to peripheral to memory
-  DMA_InitStructure.DMA_BufferSize = ADC_CONV_BUFF_SIZE;                     // Set DMA channel buffersize to peripheral to ADC_CONV_BUFF_SIZE
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;	     // Disable DMA channel Peripheral address auto increment
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;                    // Enable Memeory increment (To be verified ....)
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;// set Peripheral data size to 8bit 
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;	     // set Memeory data size to 8bit 
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;                              // Set DMA in normal mode
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High;	                     // Set DMA channel priority to High
-  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;                               // Disable memory to memory option 
-  DMA_Init(DMA1_Channel1, &DMA_InitStructure);								 // Use Init structure to initialise channel1 (channel linked to ADC)
-
-  /* Enable Transmit Complete Interrup for DMA channel 1 */ 
-  DMA_ITConfig(DMA1_Channel1, DMA_IT_TC, ENABLE);
-  
-  /* Setup NVIC for DMA channel 1 interrupt request */
-  NVIC_InitStructure.NVIC_IRQChannel =   DMA1_Channel1_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-  
-}
-
-
-void processTempData(void)
-{
-  uint32_t index,dataSum;
-  dataSum = 0;
-
-  /* sort received data in */
-  insertionSort(ADC_ConvertedValueBuff, MAX_TEMP_CHNL);
-  
-  /* Calculate the Interquartile mean */
-  tempAVG = interquartileMean(ADC_ConvertedValueBuff, MAX_TEMP_CHNL);
-  
-  /* Sum up all mesured data for reference temperature average calculation */ 
-  for (index=16; index < ADC_CONV_BUFF_SIZE; index++){
-    dataSum += ADC_ConvertedValueBuff[index];
-  }
-  /* Devide sum up result by 4 for the temperature average calculation*/
-  refAVG = dataSum / 4 ;
-
-
-  /* Calculate temperature in °C from Interquartile mean */
-  temperature_C = ( (int32_t) tempAVG - (int32_t) calibdata.TS_CAL_COLD ) ;	
-  temperature_C = temperature_C * (int32_t)(110 - 25);                      
-  temperature_C = temperature_C / 
-                  (int32_t)(calibdata.TS_CAL_HOT - calibdata.TS_CAL_COLD); 
-  temperature_C = temperature_C + 25; 
+	
 }
 
 void BeepDelauyed(uint32_t time_on, uint32_t time_off, uint32_t iter) 
@@ -1074,7 +799,7 @@ void SysTick_Handler(void)
     TimingDelay_Decrement();
 }
 
-void DMA1_Channel1_IRQHandler    (void)
+void DMA1_Channel1_IRQHandler(void) //not work correct
 {
   DMA_ClearFlag(DMA1_IT_TC1);
   setADCDMA_TransferComplete();  // set flag_ADCDMA_TransferComplete global flag 
@@ -1292,24 +1017,7 @@ if(command == 0xB5)
     }
 }
 
-/**
-  * @brief  Configures the different system clocks.
-  * @param  None
-  * @retval None
- */ 
-void RCC_Configuration(void)
-{  
-  RCC_HSICmd(ENABLE);//Enable HSI Clock  
-  while (RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);//!< Wait till HSI is ready  
-  RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI); //Set HSI as sys clock   
-  RCC_MSIRangeConfig(RCC_MSIRange_6);//Set MSI clock range to ~4.194MHz*/  
-  
-  RCC_HSEConfig(RCC_HSE_OFF);  /*Disable HSE*/
-  if(RCC_GetFlagStatus(RCC_FLAG_HSERDY) != RESET )
-  {    
-    while(1); //Stay in infinite loop if HSE is not disabled*/
-  }
-}
+
 
 
 /**
@@ -1335,6 +1043,25 @@ void clearADCDMA_TransferComplete(void)
 {
   flag_ADCDMA_TransferComplete = false;
 }
+
+/*
+void hvl()
+{
+GPIO_InitTypeDef gpio;
+RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
+
+	gpio.GPIO_Pin = GPIO_Pin_4;
+    gpio.GPIO_Mode = GPIO_Mode_OUT;
+    gpio.GPIO_Speed = GPIO_Speed_40MHz;
+    gpio.GPIO_OType = GPIO_OType_PP;
+    //gpio.GPIO_PuPd = GPIO_PuPd_DOWN;
+
+	 GPIO_Init(GPIOA,&gpio);
+
+	// GPIO_ResetBits(GPIOA, GPIO_Pin_4);
+	GPIO_SetBits(GPIOA, GPIO_Pin_4);
+}
+*/
 
 
 //BeepDelauyed(1,1);	    //ultra

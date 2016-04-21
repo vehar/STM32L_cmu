@@ -39,7 +39,6 @@ void acquireTemperatureData(void);
 
 extern ADC_InitTypeDef ADC_InitStructure;
 extern ADC_CommonInitTypeDef ADC_CommonInitStructure;
-extern DMA_InitTypeDef DMA_InitStructure;
 
 extern void setADCDMA_TransferComplete(void);
 extern void clearADCDMA_TransferComplete(void);

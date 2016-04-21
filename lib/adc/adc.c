@@ -41,6 +41,7 @@ ADC_SoftwareStartInjectedConv(ADC1);
 
 
 /////////////////////////////////////////////////
+extern DMA_InitTypeDef DMA_InitStructure;
 
 void acquireTemperatureData(void)
 {
