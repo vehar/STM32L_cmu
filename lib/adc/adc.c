@@ -136,3 +136,26 @@ void powerDownADC_Temper(void)
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, DISABLE);
 }
 
+
+
+
+void devise_voltages_chk(void)
+{
+	uint32_t AdcData = 0;
+	
+	   AdcData = ADC1->JDR1;//	 stm_adc_5v_DATA: //0x03
+	AdcData = AdcData * 3.3 / 4095;
+	 AdcData = ADC1->JDR2;// stm_adc_140v_DATA: //0x04
+	AdcData = AdcData * 3.3 / 4095;
+	
+ device_140_v = 0;
+ device_5000_mv = 0;
+ device_3300_mv =0;
+ device_1800_mv = 0;
+	
+	if((device_140_v 	 >= U_140_V_MAX)  ||(device_140_v   < U_140_V_MIN))  { FAULT_F_SET(F_FAULT_140V); };
+	if((device_5000_mv >= U_5000_mV_MAX)||(device_5000_mv < U_5000_mV_MIN)){ FAULT_F_SET(F_FAULT_5000mV); };
+	if((device_3300_mv >= U_3300_mV_MAX)||(device_3300_mv < U_3300_mV_MIN)){ FAULT_F_SET(F_FAULT_3300mV); };	
+	if((device_1800_mv >= U_1800_mV_MAX)||(device_1800_mv < U_1800_mV_MIN)){ FAULT_F_SET(F_FAULT_1800mV); };	
+	
+}

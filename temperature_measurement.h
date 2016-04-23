@@ -5,6 +5,7 @@
 
 #include "stm32l1xx.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 #define FACTORY_CALIB_BASE        ((uint32_t)0x1FF80078)    /*!< Calibration Data Bytes base address */
 #define FACTORY_CALIB_DATA        ((CALIB_TypeDef *) FACTORY_CALIB_BASE)
@@ -30,6 +31,13 @@
 #define ADC_CONV_BUFF_SIZE 20
 
 
+//Limit value defines
+
+#define STM_TEMPERATURE_MIN  0 //C
+#define STM_TEMPERATURE_MAX  85 //C
+
+#define AXEL_TEMPERATURE_MIN  0 //C
+#define AXEL_TEMPERATURE_MAX  85 //C
 typedef struct
 {
     uint16_t VREF;
@@ -63,4 +71,5 @@ void  writeCalibData(CALIB_TypeDef* calibStruct);
 FunctionalState  testUserCalibData(void);
 FunctionalState  testFactoryCalibData(void);
 
+bool STM_temperature_check(void);
 #endif //__TEMPERATURE_MEASUREMENT_H

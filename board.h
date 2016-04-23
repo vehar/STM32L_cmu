@@ -29,11 +29,11 @@
 #include "uart.h"
 #include "gps.h"
 
-#include "btns.h"  
 #include "adc.h"
 #include "timer.h"
-
-	 
+#include "watch_dogs.h"
+#include "device_power.h"
+#include "beeper.h"
 #ifdef __cplusplus
 }
 #endif
@@ -67,22 +67,14 @@
 #define TEMPERATURE     0xB3 
 #define STM_TEMPERATURE 0xB4 
 
+#define MAIN_RWR_ON	    GPIO_SetBits(GPIOB, GPIO_Pin_0)
+#define MAIN_RWR_OFF	GPIO_ResetBits(GPIOB, GPIO_Pin_0)
 
-#define BUTT_1 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_4)== 0)
-#define BUTT_2 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0)== 0)	
-#define BUTT_3 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2)== 0)	
-#define BUTT_4 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3)== 0)	
-#define BUTT_5 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1)== 0)	
-#define BUTT_6 (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_5)== 0)	//stik
-	
 #define LED_ON	GPIO_SetBits(GPIOB, GPIO_Pin_11)
 #define LED_OFF	GPIO_ResetBits(GPIOB, GPIO_Pin_11)	
 
 #define SPEAKER_ON	GPIO_SetBits(GPIOC, GPIO_Pin_6)
 #define SPEAKER_OFF	GPIO_ResetBits(GPIOC, GPIO_Pin_6)
-
-#define MAIN_RWR_ON	    GPIO_SetBits(GPIOB, GPIO_Pin_0)
-#define MAIN_RWR_OFF	GPIO_ResetBits(GPIOB, GPIO_Pin_0)
 
 
 extern RCC_ClocksTypeDef RCC_Clocks;

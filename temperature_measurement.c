@@ -142,3 +142,20 @@ void processTempData(void)
                   (int32_t)(calibdata.TS_CAL_HOT - calibdata.TS_CAL_COLD); 
   temperature_C = temperature_C + 25; 
 }
+
+
+bool STM_temperature_check(void) 
+{
+  acquireTemperatureData(); // Re-enable DMA and ADC conf and start Temperature Data acquisition 
+ 
+	for(uint32_t i = 0; i< 5000; i++); //dummy delay for end of conv
+	
+	processTempData(); // Process mesured Temperature data - calculate average temperature value in °C 
+      //  average temperature value in °C  
+	temperature_C = temperature_C + 31; //31 = temp bug fix! //TODO: fix it
+	
+	if((temperature_C >= STM_TEMPERATURE_MIN) &&(temperature_C < STM_TEMPERATURE_MAX))
+		return true;
+	else 
+		return false; 
+}

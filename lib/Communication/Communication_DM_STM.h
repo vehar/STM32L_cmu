@@ -1,7 +1,7 @@
 //#pragma once
 
-#ifndef COMMUNICATION_DM_STM
-#define COMMUNICATION_DM_STM
+#ifndef __COMMUNICATION_DM_STM
+#define __COMMUNICATION_DM_STM
 
 #include <stdint.h>
 #include <string.h>
@@ -64,4 +64,4 @@ static void TxBufClear(void);
 
 };
 
-#endif //COMMUNICATION_DM_STM
+#endif //__COMMUNICATION_DM_STM
