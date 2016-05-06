@@ -12,7 +12,7 @@ bool Batt_voltage_check(void)
 
 bool Batt_current_check(void)
 { 
-	uint32_t data = INA219_shuntCurrent_Raw();
+	uint32_t data = INA219_shuntCurrent(); //INA219_shuntCurrent_Raw
 	if((data > AKK_CURRENT_MIN_RED)&&(data < AKK_CURRENT_MAX_RED)) 
 		return true;
 	else 

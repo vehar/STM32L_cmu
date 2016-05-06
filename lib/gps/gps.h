@@ -7,12 +7,13 @@
 #include "stm32l1xx_usart.h"
 #include "uart.h"
 
-void gps_on();
-void gps_parser();
-void gps_init();
-void gps();
 uint8_t time_return(uint8_t i);
 uint8_t lat_return(uint8_t i);
 uint8_t n_s_return();
 uint8_t long_return(uint8_t i);
 uint8_t e_w_return();
+
+void gps_on();
+void gps_parser();
+void gps_init();
+void gps();

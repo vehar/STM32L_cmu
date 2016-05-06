@@ -10,7 +10,7 @@
 #include "stm32l1xx_iwdg.h"
 
 
-void init_timer(void);
+void timer_init(void);
 int16_t enc_GetRelativeMove(void);
 
 #ifdef __cplusplus

@@ -81,6 +81,6 @@ extern void clearADCDMA_TransferComplete(void);
 
 extern void clearADCDMA_TransferComplete(void);
 
-void devise_voltages_chk(void);
+uint32_t devise_voltages_chk(void);
 /*extern void setADCDMA_TransferComplete(void);*/
 #endif //__ADC_H

@@ -1,8 +1,5 @@
 #include "gps.h"
 
-
-
-
 unsigned char standby[]={"$PMTK161,0*28\x0D\x0A"};
 unsigned char always_locate_mode[]={"$PMTK255,8*23\x0D\x0A"};
 unsigned char return_locate_mode[]={"$PMTK001,255,3*35\x0D\x0A"};

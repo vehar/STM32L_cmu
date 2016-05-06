@@ -6,7 +6,7 @@
 
 
  void delay();
-void init_I2C1(void);
+void I2C1_init(void);
 
 void i2c_write(uint8_t address,uint8_t  reg);
 void i2c_write_set(uint8_t  address,uint8_t  reg,uint8_t  data1,uint8_t  data2);

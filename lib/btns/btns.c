@@ -31,6 +31,7 @@ void Buttons_Init()
     GPIO_B.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	  GPIO_Init(GPIOB, &GPIO_B);
 	
+	
 	 // GPIO_SetBits(GPIOC, GPIO_Pin_6);
 	//  GPIO_SetBits(GPIOC, GPIO_Pin_7);
 }

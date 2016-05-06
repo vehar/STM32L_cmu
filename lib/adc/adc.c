@@ -1,4 +1,5 @@
 #include "adc.h"
+//http://chipspace.ru/stm32l-discovery-adc/
 
 void adc_init()
 {
@@ -11,7 +12,7 @@ while (RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
 RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA , ENABLE);	
 
-GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5; //2, 3
+GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5; //2, 3
 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN; 
 GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 
 GPIO_Init(GPIOA, &GPIO_InitStructure); 	
@@ -21,10 +22,11 @@ ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;//we will convert many times
 ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; //right 12-bit data alignment in ADC data register  
 ADC_Init(ADC1, &ADC_InitStructure);//load structure values to control and status registers
 
-ADC_InjectedSequencerLengthConfig(ADC1, 2);
-
+ADC_InjectedSequencerLengthConfig(ADC1, 4);
 ADC_InjectedChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_192Cycles);	
 ADC_InjectedChannelConfig(ADC1, ADC_Channel_3, 2, ADC_SampleTime_192Cycles);
+ADC_InjectedChannelConfig(ADC1, ADC_Channel_4, 3, ADC_SampleTime_192Cycles);	
+ADC_InjectedChannelConfig(ADC1, ADC_Channel_5, 4, ADC_SampleTime_192Cycles);
 
 ADC_ExternalTrigInjectedConvEdgeConfig(ADC1, ADC_ExternalTrigInjecConvEdge_None);
 
@@ -32,6 +34,7 @@ ADC_AutoInjectedConvCmd(ADC1, ENABLE);
 
 ADC_Cmd(ADC1, ENABLE);
 
+while(!(ADC1->SR&ADC_SR_ADONS)); //wait till ready
 //TODO: delay();
 
 ADC_SoftwareStartInjectedConv(ADC1);  
@@ -139,7 +142,7 @@ void powerDownADC_Temper(void)
 
 
 
-void devise_voltages_chk(void)
+uint32_t devise_voltages_chk(void) 
 {
 	uint32_t AdcData = 0;
 	
@@ -153,9 +156,10 @@ void devise_voltages_chk(void)
  device_3300_mv =0;
  device_1800_mv = 0;
 	
-	if((device_140_v 	 >= U_140_V_MAX)  ||(device_140_v   < U_140_V_MIN))  { FAULT_F_SET(F_FAULT_140V); };
-	if((device_5000_mv >= U_5000_mV_MAX)||(device_5000_mv < U_5000_mV_MIN)){ FAULT_F_SET(F_FAULT_5000mV); };
-	if((device_3300_mv >= U_3300_mV_MAX)||(device_3300_mv < U_3300_mV_MIN)){ FAULT_F_SET(F_FAULT_3300mV); };	
-	if((device_1800_mv >= U_1800_mV_MAX)||(device_1800_mv < U_1800_mV_MIN)){ FAULT_F_SET(F_FAULT_1800mV); };	
+	if((device_140_v 	 >= U_140_V_MAX)  ||(device_140_v   < U_140_V_MIN))  { FAULT_F_SET(F_FAULT_140V); Proc_Pow_OFF();};
+	if((device_5000_mv >= U_5000_mV_MAX)||(device_5000_mv < U_5000_mV_MIN)){ FAULT_F_SET(F_FAULT_5000mV); Proc_Pow_OFF();};
+	if((device_3300_mv >= U_3300_mV_MAX)||(device_3300_mv < U_3300_mV_MIN)){ FAULT_F_SET(F_FAULT_3300mV); Proc_Pow_OFF();};	
+	if((device_1800_mv >= U_1800_mV_MAX)||(device_1800_mv < U_1800_mV_MIN)){ FAULT_F_SET(F_FAULT_1800mV); Proc_Pow_OFF();};	
+	
 	
 }

@@ -25,7 +25,7 @@ void delay_long()
 
 
 
-void init_I2C1(void)
+void I2C1_init(void)
 {
     
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
@@ -136,7 +136,7 @@ I2C1->DR = data1;
 while (!(I2C1->SR1 & I2C_SR1_BTF)){}
 
 I2C1->CR1 |= I2C_CR1_STOP;
-delay();
+	delay(); //TODO: for what???
 }
 
 

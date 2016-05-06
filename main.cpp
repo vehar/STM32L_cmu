@@ -276,7 +276,7 @@ void tmg_dm(uint8_t pid) //https://docs.google.com/document/d/1nXo-8PuYDCrjen-9j
 	Voltage_chk();	
 	//Temperature_chk();
 	//Axel_chk();
-	Btn_chk();		
+	//Btn_chk();//new funk		
 	Enc_chk();
 	
 	rx_handling();	
@@ -319,16 +319,16 @@ void init_mcu_fu()
     All_clk_On(); 
  //Timer2_init_vs_irq(); //ovr_irq
 	uart_init();		
-	init_timer();	
-	init_I2C1();	
+	timer_init();	
+	I2C1_init();	
 	//Spi_hw_init(); //init in Comm obj
 	Buttons_Init(); //! todo 
 	Button_init_vs_irq();
 	configureADC_Temp();//HV
-	//adc_init();
+	adc_init();
 	delay();
 	//gps_init();		
-	//INA_Conf();	
+	INA_Conf();	
 	
 #ifdef WDG_ON
 	//IWDG_Configuration();	
@@ -371,6 +371,19 @@ uint32_t Prelaunch_verification(void)
 	return result;
 }
 
+void Periodic_verification(void)
+{
+	uint32_t result = 0;
+	
+	if(STM_temperature_check()) 	{result ++;}
+	if(Axel_temperature_check()) 	{result ++;}
+	if(devise_voltages_chk()) 	{result ++;} //Only after mainPow is on
+}
+
+uint32_t BattVolt = 0;
+uint32_t BattCurr = 0;
+
+uint32_t i2c_test_read = 0;
 
 int main(void) 
 {
@@ -411,17 +424,19 @@ int main(void)
 	 
 	
 	init_mcu_fu();
-
+	
+Communication Comm;		//Communication protocol vs STM
 	
 
 	Prelaunch_verification();
 	
 	SysTick_Config(RCC_Clocks.HCLK_Frequency / 2000); // Configure SysTick IRQ and SysTick Timer to generate interrupts every 500µs
 
-/*	__enable_irq();			
+//*
+__enable_irq();			
 	NVIC_EnableIRQ(SPI2_IRQn);
 	SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_RXNE, ENABLE);
-*/	
+//*/	
 
 /*	if(f_SystemOk) //system & device ok	
 	{
@@ -432,7 +447,7 @@ int main(void)
 	
 	//Proc_Pow_ON();
 
-		
+	/*	
 while(1)
 {
 	
@@ -442,15 +457,29 @@ Butt_poll();
 	
 butt_handler();	
 	
-	devise_voltages_chk();
-	
-	/*if(f_ButtPressed) //10-10 pisk
-	{
-		LED_ON;	
-		BeepDelauyed(100,100);	
-	}*/
-	
-}	
+devise_voltages_chk();	
+}	*/
+
+/*
+while(1) //Ina219_test
+{
+	BattVolt=INA219_busVoltageRaw();
+	BattCurr=INA219_shuntCurrent_Raw();
+}*/
+
+/*
+while(1) //axel test
+{
+	i2c_test_read = i2c_read_1b(0x30, 0x0f); //0x33
+	i2c_test_read = i2c_read_1b(0x30,  0x0D); //00
+	i2c_test_read = i2c_read_1b(0x30,  0x0C); //00
+	i2c_test_read = i2c_read_1b(0x30,  0x20); //0x07 
+}
+*/
+
+task_add(*Butt_poll);	
+	task_add(*butt_handler);
+	//task_add(*devise_voltages_chk);
 	task_add(*IWDG_ReloadCounter);		
 	task_add(*tmg_dm);
 		
@@ -804,15 +833,12 @@ void hvl()
 {
 GPIO_InitTypeDef gpio;
 RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
-
 	gpio.GPIO_Pin = GPIO_Pin_4;
     gpio.GPIO_Mode = GPIO_Mode_OUT;
     gpio.GPIO_Speed = GPIO_Speed_40MHz;
     gpio.GPIO_OType = GPIO_OType_PP;
     //gpio.GPIO_PuPd = GPIO_PuPd_DOWN;
-
 	 GPIO_Init(GPIOA,&gpio);
-
 	// GPIO_ResetBits(GPIOA, GPIO_Pin_4);
 	GPIO_SetBits(GPIOA, GPIO_Pin_4);
 }

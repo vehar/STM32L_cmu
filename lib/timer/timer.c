@@ -1,6 +1,6 @@
 #include "timer.h"
 
-void init_timer(void)
+void timer_init(void)
 { 
   GPIO_InitTypeDef gpio_cfg;
 	TIM_TimeBaseInitTypeDef timer_base;

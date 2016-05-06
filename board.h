@@ -24,8 +24,8 @@
 #include "stm32l1xx_syscfg.h"
 #include "misc.h"
 #include "stm32l1xx_adc.h"
-#include "taskmgr.h"
 #include "stm32l1xx_usart.h"
+#include "taskmgr.h"
 #include "uart.h"
 #include "gps.h"
 

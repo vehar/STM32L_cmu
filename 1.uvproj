@@ -82,6 +82,8 @@
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
+            <nStopA1X>0</nStopA1X>
+            <nStopA2X>0</nStopA2X>
           </AfterMake>
           <SelectedForBatchBuild>0</SelectedForBatchBuild>
           <SVCSIdString></SVCSIdString>
@@ -145,7 +147,7 @@
             <RestoreSysVw>1</RestoreSysVw>
           </Target>
           <RunDebugAfterBuild>0</RunDebugAfterBuild>
-          <TargetSelection>11</TargetSelection>
+          <TargetSelection>8</TargetSelection>
           <SimDlls>
             <CpuDll></CpuDll>
             <CpuDllArguments></CpuDllArguments>
@@ -173,7 +175,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\ULP2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -359,6 +361,8 @@
             <uSurpInc>0</uSurpInc>
             <uC99>1</uC99>
             <useXO>0</useXO>
+            <v6Lang>0</v6Lang>
+            <v6LangP>0</v6LangP>
             <VariousControls>
               <MiscControls></MiscControls>
               <Define></Define>
@@ -717,11 +721,6 @@
               <FilePath>.\temperature_measurement.c</FilePath>
             </File>
             <File>
-              <FileName>watch_dogs.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\watch_dogs.c</FilePath>
-            </File>
-            <File>
               <FileName>device_power.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\device_power.c</FilePath>
@@ -735,11 +734,6 @@
               <FileName>butns_handler.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\butns_handler.c</FilePath>
-            </File>
-            <File>
-              <FileName>battery.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\battery.c</FilePath>
             </File>
           </Files>
         </Group>
